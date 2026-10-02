@@ -1,0 +1,11 @@
+name = "citycare-ai"
+main = "./functions/index.ts"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "citycare-db"
+database_id = "replace-with-your-d1-id"
+
+[vars]
+VITE_APP_NAME = "CityCare AI"
