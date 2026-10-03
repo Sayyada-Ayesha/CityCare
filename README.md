@@ -99,18 +99,17 @@ The application targets Cloudflare's Free plan: Pages static hosting, Pages Func
 ### One-time Cloudflare setup
 
 1. Confirm the GitHub repository visibility is **Private**. Connecting a private repository to Pages does not require making it public.
-2. In Cloudflare, create a D1 database named `citycare-db` on the Free plan and copy its database ID.
-3. Replace `REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID` in `wrangler.toml` with that ID. This ID is configuration, not a secret.
-4. From the repository root, apply the migrations to the remote database:
+2. The existing D1 database `citycare-db` is configured in `wrangler.toml` with its database ID and the `DB` binding.
+3. From the repository root, apply the migrations to the remote database:
 
    ```sh
    npx wrangler d1 migrations apply citycare-db --remote
    ```
 
-5. Create a Cloudflare Pages project connected to the private GitHub repository. Set production branch `main`, build command `npm run build`, and output directory `dist`.
-6. In Pages project settings, add a D1 binding for the **Production** environment with variable name `DB` and select `citycare-db`. Configure Preview only if needed, preferably with a separate database.
-7. In Pages settings, add `CITYCARE_ADMIN_PIN` as an encrypted **Secret** for Production. Generate a strong value, for example with `openssl rand -hex 24`. Do not configure it as a plain-text variable or build-time environment value. Admin operations are disabled unless this server-side secret is configured.
-8. Deploy `main`. After deployment, verify `/api/health` and test admin access.
+4. Create a Cloudflare Pages project connected to the private GitHub repository. Set production branch `main`, build command `npm run build`, and output directory `dist`.
+5. In Pages project settings, add a D1 binding for the **Production** environment with variable name `DB` and select `citycare-db`. Configure Preview only if needed, preferably with a separate database.
+6. In Pages settings, add `CITYCARE_ADMIN_PIN` as an encrypted **Secret** for Production. Generate a strong value, for example with `openssl rand -hex 24`. Do not configure it as a plain-text variable or build-time environment value. Admin operations are disabled unless this server-side secret is configured.
+7. Deploy `main`. After deployment, verify `/api/health` and test admin access.
 
 Pages Functions are discovered in `functions/api/[[path]].ts`. `wrangler.toml` declares the Pages output directory and D1 binding. `public/_headers` configures security and cache headers, `public/_redirects` supports Vue Router history routes, and the service worker never caches `/api/` responses.
 
