@@ -1,0 +1,17 @@
+{
+  "name": "CityCare AI",
+  "short_name": "CityCare",
+  "description": "Report, track, and resolve civic issues with local AI assistance.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

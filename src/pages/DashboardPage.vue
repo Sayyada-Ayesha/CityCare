@@ -1,10 +1,28 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 
 const store = useAppStore()
 const router = useRouter()
+const error = ref('')
+
+onMounted(async () => {
+  try {
+    await store.loadCitizenComplaints()
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Could not load your dashboard.'
+  }
+})
+
+const copyCitizenId = async () => {
+  try {
+    await navigator.clipboard.writeText(store.citizenToken)
+    error.value = 'Citizen ID copied.'
+  } catch {
+    error.value = 'Clipboard access is unavailable. Select and copy the ID above.'
+  }
+}
 
 const citizenComplaints = computed(() => store.getCitizenComplaints())
 const total = computed(() => citizenComplaints.value.length)
@@ -27,6 +45,7 @@ const counts = computed(() => ({
       </div>
       <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium" @click="router.push('/report')">Report Issue</button>
     </div>
+    <p v-if="error" role="status" class="mb-4 text-sm text-slate-600">{{ error }}</p>
 
     <div class="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -34,7 +53,7 @@ const counts = computed(() => ({
           <p class="text-sm text-slate-500">Anonymous citizen ID</p>
           <p class="mt-1 font-mono text-lg font-semibold">{{ store.citizenToken }}</p>
         </div>
-        <button class="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white" @click="navigator.clipboard?.writeText(store.citizenToken)">Copy Citizen ID</button>
+        <button class="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white" @click="copyCitizenId">Copy Citizen ID</button>
       </div>
     </div>
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 
@@ -7,6 +7,15 @@ const store = useAppStore()
 const router = useRouter()
 const search = ref('')
 const statusFilter = ref('ALL')
+const error = ref('')
+
+onMounted(async () => {
+  try {
+    await store.loadCitizenComplaints()
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Could not load your complaints.'
+  }
+})
 
 const complaints = computed(() => {
   return store.getCitizenComplaints().filter((item) => {
@@ -26,6 +35,7 @@ const complaints = computed(() => {
       </div>
       <button class="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white" @click="router.push('/report')">Report Issue</button>
     </div>
+    <p v-if="error" role="alert" class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{{ error }}</p>
 
     <div class="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row">
       <input v-model="search" placeholder="Search complaint number or title" class="w-full rounded-xl border border-slate-300 bg-slate-50 p-3 md:max-w-xs" />

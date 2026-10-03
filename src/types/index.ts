@@ -70,7 +70,7 @@ export interface EvidenceRecord {
 export interface ComplaintRecord extends ComplaintDraft {
   id: string
   complaintNumber: string
-  citizenTokenHash: string
+  citizenTokenHash?: string
   authorityId: string
   description: string
   createdAt: string

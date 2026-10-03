@@ -70,17 +70,19 @@ Admin access uses a single server-side secret, `CITYCARE_ADMIN_PIN`, validated i
 - no external API keys are required for inference
 - model downloads happen in the browser on first use
 - no raw citizen token is stored in the database
-- admin notes remain internal and are not exposed to citizens
+- the admin PIN is sent only to same-origin Pages Functions over HTTPS and is not persisted in local storage
+- citizen-specific API responses are excluded from service-worker caches
 
 ## Setup
 
-1. Install dependencies:
-   `npm install`
-2. Copy the example env file:
-   `cp .env.example .env`
-3. Configure your local or deployment environment.
-4. Start the app:
-   `npm run dev`
+Requirements: Node.js 22 or newer and npm.
+
+```sh
+npm install
+npm run dev
+```
+
+No `.env` file is required for the frontend. Never put `CITYCARE_ADMIN_PIN` in a `VITE_*` variable, `.env`, source code, or a committed file. For local Pages Functions development, put a local PIN in the ignored `.dev.vars` file; for production, configure it as a Cloudflare secret.
 
 ## Development
 
@@ -90,32 +92,42 @@ Admin access uses a single server-side secret, `CITYCARE_ADMIN_PIN`, validated i
 - `npm run lint` — run ESLint
 - `npm run typecheck` — run Vue TypeScript validation
 
-## D1 setup
-
-1. Create a D1 database in Cloudflare.
-2. Update the `database_id` in `wrangler.toml`.
-3. Run the migrations. Example:
-   `npx wrangler d1 execute citycare-db --local --file ./migrations/0001_initial.sql`
-4. For deployment, bind `DB` to your Cloudflare D1 database and set `CITYCARE_ADMIN_PIN` as a secret.
-
 ## Cloudflare Pages deployment
 
-This project is prepared for Cloudflare Pages deployment.
+The application targets Cloudflare's Free plan: Pages static hosting, Pages Functions, and D1. It uses no paid APIs, AI keys, OAuth providers, or remote inference service. WebLLM downloads its model and runs inference in the visitor's browser using WebGPU. Map tiles use OpenStreetMap's public tile service and are subject to its usage policy; it provides no CityCare SLA.
 
+### One-time Cloudflare setup
+
+1. Confirm the GitHub repository visibility is **Private**. Connecting a private repository to Pages does not require making it public.
+2. In Cloudflare, create a D1 database named `citycare-db` on the Free plan and copy its database ID.
+3. Replace `REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID` in `wrangler.toml` with that ID. This ID is configuration, not a secret.
+4. From the repository root, apply the migrations to the remote database:
+
+   ```sh
+   npx wrangler d1 migrations apply citycare-db --remote
+   ```
+
+5. Create a Cloudflare Pages project connected to the private GitHub repository. Set production branch `main`, build command `npm run build`, and output directory `dist`.
+6. In Pages project settings, add a D1 binding for the **Production** environment with variable name `DB` and select `citycare-db`. Configure Preview only if needed, preferably with a separate database.
+7. In Pages settings, add `CITYCARE_ADMIN_PIN` as an encrypted **Secret** for Production. Generate a strong value, for example with `openssl rand -hex 24`. Do not configure it as a plain-text variable or build-time environment value. Admin operations are disabled unless this server-side secret is configured.
+8. Deploy `main`. After deployment, verify `/api/health` and test admin access.
+
+Pages Functions are discovered in `functions/api/[[path]].ts`. `wrangler.toml` declares the Pages output directory and D1 binding. `public/_headers` configures security and cache headers, `public/_redirects` supports Vue Router history routes, and the service worker never caches `/api/` responses.
+
+### Local Pages Functions
+
+Create an ignored `.dev.vars` file and configure a local-only value for `CITYCARE_ADMIN_PIN`, then run `npx wrangler pages dev dist`. Apply local migrations with `npx wrangler d1 migrations apply citycare-db --local`. `npm run dev` serves the frontend only; it does not emulate Pages Functions or D1.
+
+### Deployment settings
+
+- Plan: Cloudflare Free
+- Production branch: `main`
 - Build command: `npm run build`
-- Output directory: `dist`
-- Pages Functions route support is provided via `functions/api/[[path]].ts`
-- Set the production branch to `main`
-
-Example URL format:
-`https://<project-name>.pages.dev`
-
-## Admin secret setup
-
-Configure `CITYCARE_ADMIN_PIN` as a Cloudflare secret. Example placeholder for local development:
-`CITYCARE_ADMIN_PIN=replace-with-your-own-secret`
-
-Do not commit a real admin secret to source control.
+- Build output directory: `dist`
+- Functions: repository `functions/` directory
+- D1 binding: `DB`
+- Production secret: `CITYCARE_ADMIN_PIN` (encrypted Cloudflare secret)
+- AI API keys/secrets: none
 
 ## WebGPU requirements
 
@@ -135,12 +147,9 @@ The model is cached by the browser after the first successful use.
 
 ## Testing
 
-The repository includes smoke tests for:
+Run the checks with `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build`.
 
-- AI schema validation
-- complaint number generation
-- authority routing
-- citizen token hashing
+Tests cover API token/admin checks, AI JSON/schema handling, complaint numbering, category routing, and citizen-token hashing.
 
 ## Troubleshooting
 

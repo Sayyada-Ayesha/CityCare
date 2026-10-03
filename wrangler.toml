@@ -1,11 +1,8 @@
 name = "citycare-ai"
-main = "./functions/index.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-10-03"
+pages_build_output_dir = "./dist"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "citycare-db"
-database_id = "replace-with-your-d1-id"
-
-[vars]
-VITE_APP_NAME = "CityCare AI"
+database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"

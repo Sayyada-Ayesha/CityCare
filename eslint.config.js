@@ -4,7 +4,7 @@ import tseslint from '@vue/eslint-config-typescript'
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', '.vite/**', 'tmp/**'],
+    ignores: ['dist/**', 'node_modules/**', '.vite/**', 'tmp/**', 'public/sw.js'],
   },
   js.configs.recommended,
   ...vue.configs['flat/recommended'],

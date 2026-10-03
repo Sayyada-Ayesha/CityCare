@@ -1,20 +1,43 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAppStore } from '../stores/app'
 import type { ComplaintStatus } from '../types'
 
 const store = useAppStore()
 const statusFilter = ref('ALL')
 const search = ref('')
+const error = ref('')
 
-const complaints = computed(() => store.complaints.filter((item) => {
+onMounted(async () => {
+  try {
+    await Promise.all([store.loadAdminComplaints(), store.loadAuthorities(true)])
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Could not load complaints.'
+  }
+})
+
+const complaints = computed(() => store.adminComplaints.filter((item) => {
   const matchesStatus = statusFilter.value === 'ALL' || item.status === statusFilter.value
   const matchesSearch = !search.value || item.title.toLowerCase().includes(search.value.toLowerCase()) || item.complaintNumber.toLowerCase().includes(search.value.toLowerCase())
   return matchesStatus && matchesSearch
 }))
 
-const updateStatus = (complaintId: string, status: string) => {
-  store.updateComplaintStatus(complaintId, status as ComplaintStatus, `Status changed to ${status}`)
+const updateStatus = async (complaintId: string, status: string) => {
+  try {
+    await store.updateComplaintStatus(complaintId, status as ComplaintStatus, `Status changed to ${status}`)
+    error.value = ''
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Could not update complaint status.'
+  }
+}
+
+const updateAuthority = async (complaintId: string, authorityId: string) => {
+  try {
+    await store.updateComplaintStatus(complaintId, undefined, 'Authority assigned.', authorityId)
+    error.value = ''
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Could not assign the authority.'
+  }
 }
 </script>
 
@@ -27,6 +50,7 @@ const updateStatus = (complaintId: string, status: string) => {
       </div>
       <div class="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">Admin session active</div>
     </div>
+    <p v-if="error" role="alert" class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{{ error }}</p>
 
     <div class="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row">
       <input v-model="search" placeholder="Search complaints" class="w-full rounded-xl border border-slate-300 bg-slate-50 p-3 md:max-w-xs" />
@@ -48,7 +72,7 @@ const updateStatus = (complaintId: string, status: string) => {
             <p class="text-sm font-semibold text-cyan-700">{{ complaint.complaintNumber }}</p>
             <h2 class="mt-1 text-xl font-semibold">{{ complaint.title }}</h2>
           </div>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
             <select :value="complaint.status" class="rounded-lg border border-slate-300 bg-slate-50 p-2" @change="updateStatus(complaint.id, ($event.target as HTMLSelectElement).value)">
               <option value="SUBMITTED">Submitted</option>
               <option value="IN_REVIEW">In Review</option>
@@ -56,6 +80,9 @@ const updateStatus = (complaintId: string, status: string) => {
               <option value="IN_PROGRESS">In Progress</option>
               <option value="RESOLVED">Resolved</option>
               <option value="CLOSED">Closed</option>
+            </select>
+            <select :value="complaint.authorityId" aria-label="Assign authority" class="max-w-48 rounded-lg border border-slate-300 bg-slate-50 p-2" @change="updateAuthority(complaint.id, ($event.target as HTMLSelectElement).value)">
+              <option v-for="authority in store.authorities.filter((item) => item.active)" :key="authority.id" :value="authority.id">{{ authority.name }}</option>
             </select>
           </div>
         </div>

@@ -1,4 +1,3 @@
-import { localAIEngine } from '../engine/LocalAIEngine'
 import { selectAuthorityForCategory } from '../../lib/complaintUtils'
 import type { ComplaintDraft, IssueAnalysis } from '../../types'
 import { IssueUnderstandingAgent } from '../agents/IssueUnderstandingAgent'
@@ -73,10 +72,6 @@ export class ComplaintWorkflowOrchestrator {
       longitude: input.longitude ?? null,
       status: 'SUBMITTED',
       aiGenerated: true,
-    }
-
-    if (localAIEngine.status === 'unavailable') {
-      return { analysis, authority, evidence, draft }
     }
 
     return { analysis, authority, evidence, draft }

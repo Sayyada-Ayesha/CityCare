@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto'
-
 export const ISSUE_CATEGORIES = [
   'Garbage',
   'Water',
@@ -13,19 +11,24 @@ export const ISSUE_CATEGORIES = [
 
 export const ISSUE_SEVERITIES = ['Low', 'Medium', 'High', 'Critical'] as const
 
-export function hashCitizenToken(token: string): string | Promise<string> {
-  if (typeof process !== 'undefined' && process.versions?.node) {
-    return createHash('sha256').update(token, 'utf8').digest('hex')
+export function generateCitizenToken(): string {
+  if (typeof globalThis !== 'undefined' && 'crypto' in globalThis && typeof globalThis.crypto?.getRandomValues === 'function') {
+    const array = new Uint8Array(16)
+    globalThis.crypto.getRandomValues(array)
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('')
   }
 
-  if (typeof window !== 'undefined' && typeof window.crypto?.subtle !== 'undefined') {
-    const bytes = new TextEncoder().encode(token)
-    return window.crypto.subtle
-      .digest('SHA-256', bytes)
-      .then((buffer) => Array.from(new Uint8Array(buffer)).map((b) => b.toString(16).padStart(2, '0')).join(''))
-  }
+  throw new Error('Secure browser randomness is required to create an anonymous citizen ID.')
+}
 
-  return createHash('sha256').update(token, 'utf8').digest('hex')
+export async function hashCitizenToken(token: string): Promise<string> {
+  const bytes = new TextEncoder().encode(token)
+
+  if (typeof globalThis === 'undefined' || !globalThis.crypto?.subtle) {
+    throw new Error('Secure hashing is unavailable in this environment.')
+  }
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
 export function generateComplaintNumber(sequence: number, year = 2026): string {
