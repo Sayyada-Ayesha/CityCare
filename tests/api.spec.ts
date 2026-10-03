@@ -36,7 +36,7 @@ function apiRequest(path: string, init: RequestInit = {}) {
   return new Request(`https://citycare.test/api/${path}`, init)
 }
 
-describe('CityCare Pages API', () => {
+describe('CityCare API', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('requires an anonymous citizen token before accepting a complaint', async () => {

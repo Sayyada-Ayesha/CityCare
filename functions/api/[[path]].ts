@@ -12,7 +12,7 @@ interface D1Database {
   batch<T = unknown>(statements: D1Statement[]): Promise<T[]>
 }
 
-interface Environment {
+export interface Environment {
   DB?: D1Database
   CITYCARE_ADMIN_PIN?: string
 }

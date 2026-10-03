@@ -53,7 +53,7 @@ The complaint workflow orchestrator sequences those agents and validates outputs
 - Routing: Vue Router
 - Mapping: Leaflet + OpenStreetMap
 - AI: WebLLM with WebGPU support
-- Backend: Cloudflare Pages Functions and Workers-style serverless routes
+- Backend: Cloudflare Workers and D1
 - Database: Cloudflare D1 + SQLite-compatible SQL schema
 
 ## Anonymous citizen system
@@ -70,7 +70,7 @@ Admin access uses a single server-side secret, `CITYCARE_ADMIN_PIN`, validated i
 - no external API keys are required for inference
 - model downloads happen in the browser on first use
 - no raw citizen token is stored in the database
-- the admin PIN is sent only to same-origin Pages Functions over HTTPS and is not persisted in local storage
+- the admin PIN is sent only to the same-origin Worker over HTTPS and is not persisted in local storage
 - citizen-specific API responses are excluded from service-worker caches
 
 ## Setup
@@ -82,7 +82,7 @@ npm install
 npm run dev
 ```
 
-No `.env` file is required for the frontend. Never put `CITYCARE_ADMIN_PIN` in a `VITE_*` variable, `.env`, source code, or a committed file. For local Pages Functions development, put a local PIN in the ignored `.dev.vars` file; for production, configure it as a Cloudflare secret.
+No `.env` file is required for the frontend. Never put `CITYCARE_ADMIN_PIN` in a `VITE_*` variable, `.env`, source code, or a committed file. For local Workers development, put a local PIN in the ignored `.dev.vars` file; for production, configure it as a Cloudflare secret.
 
 ## Development
 
@@ -92,40 +92,38 @@ No `.env` file is required for the frontend. Never put `CITYCARE_ADMIN_PIN` in a
 - `npm run lint` — run ESLint
 - `npm run typecheck` — run Vue TypeScript validation
 
-## Cloudflare Pages deployment
+## Cloudflare Workers deployment
 
-The application targets Cloudflare's Free plan: Pages static hosting, Pages Functions, and D1. It uses no paid APIs, AI keys, OAuth providers, or remote inference service. WebLLM downloads its model and runs inference in the visitor's browser using WebGPU. Map tiles use OpenStreetMap's public tile service and are subject to its usage policy; it provides no CityCare SLA.
+The application uses Cloudflare Workers with Static Assets and D1. It uses no paid APIs, AI keys, OAuth providers, or remote inference service. WebLLM downloads its model and runs inference in the visitor's browser using WebGPU. Map tiles use OpenStreetMap's public tile service and are subject to its usage policy; it provides no CityCare SLA.
 
-### One-time Cloudflare setup
+### Cloudflare setup
 
-1. Confirm the GitHub repository visibility is **Private**. Connecting a private repository to Pages does not require making it public.
-2. The existing D1 database `citycare-db` is configured in `wrangler.toml` with its database ID and the `DB` binding.
-3. From the repository root, apply the migrations to the remote database:
+1. In the Cloudflare dashboard, connect this repository using the Workers Git deployment flow. Set the production branch to `main`, the build command to `npm run build`, and the deploy command to `npx wrangler deploy`.
+2. The existing D1 database `citycare-db` is configured in `wrangler.toml` with database ID `d70062fe-708b-4b52-a111-9f1e3dfe841c` and binding `DB`.
+3. Ensure the remote D1 migrations have been applied before using the API. The SQL files are in `migrations/`.
+4. In the Worker settings, configure `CITYCARE_ADMIN_PIN` as an encrypted secret. Generate a strong value, for example with `openssl rand -hex 24`. Do not configure it as a plain-text variable or build-time environment value. Admin operations are disabled unless this server-side secret is configured.
+5. Deploy from the dashboard or run the deploy script after authentication:
 
    ```sh
-   npx wrangler d1 migrations apply citycare-db --remote
+   npm run deploy
    ```
 
-4. Create a Cloudflare Pages project connected to the private GitHub repository. Set production branch `main`, build command `npm run build`, and output directory `dist`.
-5. In Pages project settings, add a D1 binding for the **Production** environment with variable name `DB` and select `citycare-db`. Configure Preview only if needed, preferably with a separate database.
-6. In Pages settings, add `CITYCARE_ADMIN_PIN` as an encrypted **Secret** for Production. Generate a strong value, for example with `openssl rand -hex 24`. Do not configure it as a plain-text variable or build-time environment value. Admin operations are disabled unless this server-side secret is configured.
-7. Deploy `main`. After deployment, verify `/api/health` and test admin access.
+The Worker entry point in `src/worker.ts` routes `/api/*` requests to the existing handler in `functions/api/[[path]].ts` and sends all other requests to the Static Assets binding. Wrangler serves `dist` and falls back to `index.html` for Vue Router history routes. The Worker-first asset rules ensure API requests are handled by the Worker. `public/_headers` configures static asset security and cache headers, and the service worker never caches `/api/` responses.
 
-Pages Functions are discovered in `functions/api/[[path]].ts`. `wrangler.toml` declares the Pages output directory and D1 binding. `public/_headers` configures security and cache headers, `public/_redirects` supports Vue Router history routes, and the service worker never caches `/api/` responses.
+### Local Workers development
 
-### Local Pages Functions
-
-Create an ignored `.dev.vars` file and configure a local-only value for `CITYCARE_ADMIN_PIN`, then run `npx wrangler pages dev dist`. Apply local migrations with `npx wrangler d1 migrations apply citycare-db --local`. `npm run dev` serves the frontend only; it does not emulate Pages Functions or D1.
+Create an ignored `.dev.vars` file and configure a local-only value for `CITYCARE_ADMIN_PIN`, then run `npm run build && npx wrangler dev`. Use `npx wrangler d1 migrations apply citycare-db --local` only if the local database needs migrations. `npm run dev` serves the frontend only; it does not emulate Workers or D1.
 
 ### Deployment settings
 
-- Plan: Cloudflare Free
+- Runtime: Cloudflare Workers with Static Assets
 - Production branch: `main`
 - Build command: `npm run build`
-- Build output directory: `dist`
-- Functions: repository `functions/` directory
+- Deploy command: `npx wrangler deploy`
+- Static asset directory: `dist`
+- Worker entry point: `src/worker.ts`
 - D1 binding: `DB`
-- Production secret: `CITYCARE_ADMIN_PIN` (encrypted Cloudflare secret)
+- Worker secret: `CITYCARE_ADMIN_PIN` (encrypted Cloudflare secret)
 - AI API keys/secrets: none
 
 ## WebGPU requirements
