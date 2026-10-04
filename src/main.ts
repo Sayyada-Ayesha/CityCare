@@ -6,8 +6,8 @@ import App from './App.vue'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // Ignore service worker registration failures and continue with the app.
+    void navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch((error: unknown) => {
+      console.warn('CityCare service worker registration failed; the app remains available online.', error)
     })
   })
 }

@@ -108,7 +108,7 @@ The application uses Cloudflare Workers with Static Assets and D1. It uses no pa
    npm run deploy
    ```
 
-The Worker entry point in `src/worker.ts` routes `/api/*` requests to the existing handler in `functions/api/[[path]].ts` and sends all other requests to the Static Assets binding. Wrangler serves `dist` and falls back to `index.html` for Vue Router history routes. The Worker-first asset rules ensure API requests are handled by the Worker. `public/_headers` configures static asset security and cache headers, and the service worker never caches `/api/` responses.
+The Worker entry point in `src/worker.ts` routes `/api/*` requests to the existing handler in `functions/api/[[path]].ts` and sends all other requests to the Static Assets binding. Wrangler serves `dist` and falls back to `index.html` for Vue Router history routes. The Worker-first asset rules ensure API requests are handled by the Worker. `public/_headers` configures static asset security and cache headers. The service worker uses network-first navigation so deployments cannot leave the app on stale HTML, falls back to its cached shell offline, and never caches `/api/` responses.
 
 ### Local Workers development
 
@@ -117,6 +117,7 @@ Create an ignored `.dev.vars` file and configure a local-only value for `CITYCAR
 ### Deployment settings
 
 - Runtime: Cloudflare Workers with Static Assets
+- Worker name: `citycare`
 - Production branch: `main`
 - Build command: `npm run build`
 - Deploy command: `npx wrangler deploy`
